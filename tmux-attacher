@@ -68,15 +68,13 @@ ui_ask_user_what_to_do() {
 }
 
 ui_ask_user_to_name_a_session() {
-    log_message "Provide a session name:"
-    printf '> '
+    ui_format_prompt "Which session should we attach to?"
     read -r session_name
 }
 
 # Asks the user to provide a name for a new Tmux session. Sets `$session_name`.
 ui_prompt_user_for_new_session_name() {
-    log_message "Provide a name for the new session:"
-    printf '> '
+    ui_format_prompt "How should we name the new session?"
     read -r session_name
 }
 
