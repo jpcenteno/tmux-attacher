@@ -1,24 +1,35 @@
 #!/bin/sh
 set -eu
 
-#!/bin/sh
-
-
 # ╔════════════════════════════════════════════════════════════════════════╗
 # ║ Logging functions                                                      ║
 # ╚════════════════════════════════════════════════════════════════════════╝
 
-COLOR_LIGHT_RED='\033[91m'
-COLOR_LIGHT_BLUE='\033[94m'
-COLOR_LIGHT_GREEN='\033[92m'
+COLOR_ERROR='\033[91m' # Light red.
+COLOR_INFO='\033[94m' # Light blue.
+COLOR_PROMPT='\033[92m' # Light Green.
 COLOR_RESET='\033[0m'
 
-log_message() {
-    printf "${COLOR_LIGHT_BLUE}%s${COLOR_RESET}\n" "${1}"
+# Prints a message using a specific color. Don't call this function directly on
+# the script.
+log_with_color() {
+    printf "${1}%s${COLOR_RESET}\n" "${2}"
 }
 
-log_error() {
-    printf "${COLOR_LIGHT_RED}%s${COLOR_RESET}\n" "${1}"
+# Prints a message color-coded for information.
+log_info() {
+    log_with_color "${COLOR_INFO}" "${1}"
+}
+
+# Prints a message line color-coded for interactive prompts.
+log_with_prompt_colors() {
+    log_with_color "${COLOR_PROMPT}" "${1}"
+}
+
+# Prints an error message, then exits with error code 1.
+log_fatal() {
+    log_with_color "${COLOR_ERROR}" "Error: ${1}"
+    exit 1
 }
 
 # ╔════════════════════════════════════════════════════════════════════════╗
@@ -30,13 +41,7 @@ has_command() {
     command -v "${1}" >/dev/null 2>&1 
 }
 
-has_command_or_die() {
-    if ! has_command "${1}"; then
-        log_error "Command unavailable: ${1}"
-        exit 1
-    fi
-}
-
+# Fails if the session named after $1 does not exist.
 tmux_session_exists() {
     tmux has-session -t "${1}" 2>/dev/null
 }
@@ -46,43 +51,21 @@ tmux_session_exists() {
 # ╚════════════════════════════════════════════════════════════════════════╝
 
 # Print text to be used in a prompt. Does not include the `read` command.
-ui_format_prompt() {
+print_prompt() {
     # Prints the text provided in `${1}` with light green color and no newline.
-    printf "${COLOR_LIGHT_GREEN}%s${COLOR_RESET} " "${1}"
-}
-
-# Prints a message displaying the user the available Tmux sessions.
-ui_list_sessions() {
-    log_message "Available Tmux sessions:"
-    tmux list-sessions
-}
-
-# Prompts the user to name a session to attach to.
-ui_ask_user_what_to_do() {
-    echo
-    log_message "a -- Attach to an existing session."
-    log_message "n -- Attach to a new session."
-    log_message "q -- Cancel."
-    ui_format_prompt "What should we do? [a,n,q]:"
-    read -r user_selection
-}
-
-ui_ask_user_to_name_a_session() {
-    ui_format_prompt "Which session should we attach to?"
-    read -r session_name
-}
-
-# Asks the user to provide a name for a new Tmux session. Sets `$session_name`.
-ui_prompt_user_for_new_session_name() {
-    ui_format_prompt "How should we name the new session?"
-    read -r session_name
+    printf "${COLOR_PROMPT}%s${COLOR_RESET} " "${1}"
 }
 
 # ╔════════════════════════════════════════════════════════════════════════╗
 # ║ Script starts here:                                                    ║
 # ╚════════════════════════════════════════════════════════════════════════╝
 
-has_command_or_die "tmux" # Required for user prompts.
+# Fail if tmux is not installed correctly.
+if ! has_command "tmux"; then
+    # Disabling SC2016. We don't want to expand $PATH.
+    # shellcheck disable=SC2016
+    log_fatal 'Command tmux not found in $PATH'
+fi
 
 # If any arguments were provided to the script, delegate them to `tmux`, then
 # exit. We only care about extending the functionality with an interactive
@@ -94,22 +77,30 @@ if [ "${#}" -ne "0" ]; then
     exit "${?}" # Resend `tmux` exit status code.
 fi
 
-ui_list_sessions
+# Prints a list of active Tmux sessions.
+log_info "Available Tmux sessions:"
+tmux list-sessions
 
-ui_ask_user_what_to_do # Sets `$user_selection`.
-
+# Ask the user how to open the new tmux client.
+echo
+log_with_prompt_colors "a -- Attach to an existing session."
+log_with_prompt_colors "n -- Attach to a new session."
+log_with_prompt_colors "q -- Cancel."
+print_prompt "What should we do? [a,n,q]:"
+read -r user_selection
 case "${user_selection}" in
 
     a)
         # --------------------------------------------------------------------------
         # Option "a" -- Attach to an existing session.
         # --------------------------------------------------------------------------
-        ui_ask_user_to_name_a_session # Sets `$session_name`
+        echo
+        print_prompt "Which session should we attach to?"
+        read -r session_name
 
         # Ensure that the provided session exists or exit with error.
         if ! tmux_session_exists "${session_name}"; then
-            log_error "Error: No active session named: ${session_name}"
-            exit 1
+            log_fatal "No active session named: ${session_name}"
         fi
 
         # Attach to the chosen session.
@@ -122,13 +113,13 @@ case "${user_selection}" in
         # --------------------------------------------------------------------------
         # Option "n" -- Attach to a new named session.
         # --------------------------------------------------------------------------
-
-        ui_prompt_user_for_new_session_name # Sets `$session_name`.
+        echo
+        print_prompt "How should we name the new session?"
+        read -r session_name
 
         # Ensure that the provided session name is not already taken.
         if tmux_session_exists "${session_name}"; then
-            log_error "Error: Session named '${session_name}' exists!"
-            exit 1
+            log_fatal "Session named '${session_name}' exists."
         fi
 
         # Attach to a new session with the chosen name.
@@ -147,7 +138,6 @@ case "${user_selection}" in
         # --------------------------------------------------------------------------
         # Fallback case -- Bad option.
         # --------------------------------------------------------------------------
-        log_error "Invalid option: ${user_selection}"
-        exit 1
+        log_fatal "Invalid option '${user_selection}'"
         ;;
 esac
