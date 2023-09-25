@@ -3,56 +3,6 @@ set -eu
 
 #!/bin/sh
 
-# tmux-attacher
-# =============
-#
-# NAME
-# ----
-# tmux-attacher - Interactive wrapper for tmux to easier session attachment.
-#
-# DESCRIPTION
-# -----------
-# The `tmux-attacher` script provides an interactive user prompt to easily
-# attach to existing Tmux sessions or create new ones. It serves as a user-
-# friendly interface to the `tmux` command, enhancing its default behavior
-# when no arguments are provided.
-#
-# When invoked without arguments, `tmux-attacher` presents an interactive menu
-# that allows the user to attach to pre-existing sessions or to create new ones.
-#
-# In cases where one or more arguments are provided, `tmux-attacher` delegates
-# those arguments to the `tmux` command, ensuring backward compatibility.
-#
-# This script's implementation follows the Proxy Design Pattern, intercepting
-# invocations of the `tmux(1)` command and extending its functionality.
-#
-# EXAMPLES
-# --------
-# Attach to or create a new tmux session using `tmux-attacher`:
-#
-#     tmux-attacher
-#
-# Delegate arguments to the underlying `tmux` command:
-#
-#     tmux-attacher [arguments]
-#
-# AUTHOR
-# ------
-# jpcenteno -- https://github.com/jpcenteno
-#
-# SEE ALSO
-# --------
-# tmux(1)
-#
-# BUGS
-# ----
-# Report bugs to [Your Email Address]. FIXME
-#
-# COPYRIGHT
-# ---------
-# This script is licensed under the [License Name]. See the LICENSE file for
-# details. FIXME
-
 
 # ╔════════════════════════════════════════════════════════════════════════╗
 # ║ Logging functions                                                      ║
