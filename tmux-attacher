@@ -27,7 +27,7 @@ log_error() {
 
 # Fails if the command $1 is not present in the $PATH.
 has_command() {
-    command -v "${1}" 2>&1 > /dev/null;
+    command -v "${1}" >/dev/null 2>&1 
 }
 
 has_command_or_die() {
@@ -64,20 +64,20 @@ ui_ask_user_what_to_do() {
     log_message "n -- Attach to a new session."
     log_message "q -- Cancel."
     ui_format_prompt "What should we do? [a,n,q]:"
-    read user_selection
+    read -r user_selection
 }
 
 ui_ask_user_to_name_a_session() {
     log_message "Provide a session name:"
     printf '> '
-    read session_name
+    read -r session_name
 }
 
 # Asks the user to provide a name for a new Tmux session. Sets `$session_name`.
 ui_prompt_user_for_new_session_name() {
     log_message "Provide a name for the new session:"
     printf '> '
-    read session_name
+    read -r session_name
 }
 
 # ╔════════════════════════════════════════════════════════════════════════╗
@@ -90,6 +90,8 @@ has_command_or_die "tmux" # Required for user prompts.
 # exit. We only care about extending the functionality with an interactive
 # prompt in case no arguments were provided.
 if [ "${#}" -ne "0" ]; then
+    # Disabling SC2068. In this case, we explicitly want to re-split elements.
+    # shellcheck disable=SC2068
     tmux ${@}
     exit "${?}" # Resend `tmux` exit status code.
 fi
@@ -116,7 +118,6 @@ case "${user_selection}" in
         tmux attach -t "${session_name}"
         exit "${?}"
 
-        break
         ;;
 
     n)
@@ -135,8 +136,6 @@ case "${user_selection}" in
         # Attach to a new session with the chosen name.
         tmux new-session -s "${session_name}"
         exit "${?}"
-
-        break
         ;;
 
     q)
@@ -144,7 +143,6 @@ case "${user_selection}" in
         # Option "q" -- Gracefully quit. 
         # --------------------------------------------------------------------------
         exit 0
-        break
         ;;
 
     *)
@@ -153,6 +151,5 @@ case "${user_selection}" in
         # --------------------------------------------------------------------------
         log_error "Invalid option: ${user_selection}"
         exit 1
-        break
         ;;
 esac
