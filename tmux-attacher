@@ -60,6 +60,15 @@ print_prompt() {
 # ║ Script starts here:                                                    ║
 # ╚════════════════════════════════════════════════════════════════════════╝
 
+if ! has_command 'gum'; then
+    echo 'FATAL:'
+    echo "${0} requires 'gum' to provide interactive prompts."
+    echo "Install 'gum' and ensure it is available in your PATH"
+    exit 1
+else
+    gum log --level debug 'Gum available!'
+fi
+
 # Fail if tmux is not installed correctly.
 if ! has_command "tmux"; then
     # Disabling SC2016. We don't want to expand $PATH.
