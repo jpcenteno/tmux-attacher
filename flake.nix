@@ -12,6 +12,12 @@
       pkgs = import nixpkgs { inherit system; };
     in
     {
+      devShells = rec {
+        default = pkgs.mkShell {
+          packages = [ pkgs.gum ];
+        };
+      };
+
       packages = rec {
         tmux-attacher = pkgs.stdenv.mkDerivation rec {
           name = "tmux-attacher";
