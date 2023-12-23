@@ -2,37 +2,6 @@
 set -eu
 
 # ╔════════════════════════════════════════════════════════════════════════╗
-# ║ Logging functions                                                      ║
-# ╚════════════════════════════════════════════════════════════════════════╝
-
-COLOR_ERROR='\033[91m' # Light red.
-COLOR_INFO='\033[94m' # Light blue.
-COLOR_PROMPT='\033[92m' # Light Green.
-COLOR_RESET='\033[0m'
-
-# Prints a message using a specific color. Don't call this function directly on
-# the script.
-log_with_color() {
-    printf "${1}%s${COLOR_RESET}\n" "${2}"
-}
-
-# Prints a message color-coded for information.
-log_info() {
-    log_with_color "${COLOR_INFO}" "${1}"
-}
-
-# Prints a message line color-coded for interactive prompts.
-log_with_prompt_colors() {
-    log_with_color "${COLOR_PROMPT}" "${1}"
-}
-
-# Prints an error message, then exits with error code 1.
-log_fatal() {
-    log_with_color "${COLOR_ERROR}" "Error: ${1}"
-    exit 1
-}
-
-# ╔════════════════════════════════════════════════════════════════════════╗
 # ║ Aux functions                                                          ║
 # ╚════════════════════════════════════════════════════════════════════════╝
 
@@ -41,20 +10,17 @@ has_command() {
     command -v "${1}" >/dev/null 2>&1 
 }
 
-# Fails if the session named after $1 does not exist.
-tmux_session_exists() {
-    tmux has-session -t "${1}" 2>/dev/null
-}
-
 # ╔════════════════════════════════════════════════════════════════════════╗
 # ║ User prompt helpers                                                    ║
 # ╚════════════════════════════════════════════════════════════════════════╝
 
-# Print text to be used in a prompt. Does not include the `read` command.
-print_prompt() {
-    # Prints the text provided in `${1}` with light green color and no newline.
-    printf "${COLOR_PROMPT}%s${COLOR_RESET} " "${1}"
+prompt_user_select_tmux_session() {
+    {
+        echo '[new session]'
+        tmux list-sessions -F '#{session_name}'
+    } | gum choose --select-if-one
 }
+
 
 # ╔════════════════════════════════════════════════════════════════════════╗
 # ║ Script starts here:                                                    ║
@@ -65,19 +31,12 @@ if ! has_command 'gum'; then
     echo "${0} requires 'gum' to provide interactive prompts."
     echo "Install 'gum' and ensure it is available in your PATH"
     exit 1
-else
-    gum log --level debug 'Gum available!'
 fi
 
-# Fail if tmux is not installed correctly.
-if ! has_command "tmux"; then
-    # Disabling SC2016. We don't want to expand $PATH.
-    # shellcheck disable=SC2016
-    log_fatal 'Command tmux not found in $PATH'
-fi
+has_command 'tmux' || gum log --level fatal --structured 'Required program not found in PATH' program 'tmux'
 
-# If any arguments were provided to the script, delegate them to `tmux`, then
-# exit. We only care about extending the functionality with an interactive
+# If any other arguments were provided to the script, delegate them to `tmux`,
+# then exit. We only care about extending the functionality with an interactive
 # prompt in case no arguments were provided.
 if [ "${#}" -ne "0" ]; then
     # Disabling SC2068. In this case, we explicitly want to re-split elements.
@@ -86,67 +45,16 @@ if [ "${#}" -ne "0" ]; then
     exit "${?}" # Resend `tmux` exit status code.
 fi
 
-# Prints a list of active Tmux sessions.
-log_info "Available Tmux sessions:"
-tmux list-sessions
+user_selection="$( prompt_user_select_tmux_session )"
 
-# Ask the user how to open the new tmux client.
-echo
-log_with_prompt_colors "a -- Attach to an existing session."
-log_with_prompt_colors "n -- Attach to a new session."
-log_with_prompt_colors "q -- Cancel."
-print_prompt "What should we do? [a,n,q]:"
-read -r user_selection
-case "${user_selection}" in
+if [ "${user_selection}" = "[new session]" ]; then
+    user_selection="$( gum input --placeholder "New session name" )"
 
-    a)
-        # --------------------------------------------------------------------------
-        # Option "a" -- Attach to an existing session.
-        # --------------------------------------------------------------------------
-        echo
-        print_prompt "Which session should we attach to?"
-        read -r session_name
+    # Create a detached session with the provided name (flag `-d`). We will
+    # attach to it later in the script. This will fail if there is already a
+    # session with the provided name.
+    tmux new-session -s "${user_selection}" -d
+fi
 
-        # Ensure that the provided session exists or exit with error.
-        if ! tmux_session_exists "${session_name}"; then
-            log_fatal "No active session named: ${session_name}"
-        fi
-
-        # Attach to the chosen session.
-        tmux attach -t "${session_name}"
-        exit "${?}"
-
-        ;;
-
-    n)
-        # --------------------------------------------------------------------------
-        # Option "n" -- Attach to a new named session.
-        # --------------------------------------------------------------------------
-        echo
-        print_prompt "How should we name the new session?"
-        read -r session_name
-
-        # Ensure that the provided session name is not already taken.
-        if tmux_session_exists "${session_name}"; then
-            log_fatal "Session named '${session_name}' exists."
-        fi
-
-        # Attach to a new session with the chosen name.
-        tmux new-session -s "${session_name}"
-        exit "${?}"
-        ;;
-
-    q)
-        # --------------------------------------------------------------------------
-        # Option "q" -- Gracefully quit. 
-        # --------------------------------------------------------------------------
-        exit 0
-        ;;
-
-    *)
-        # --------------------------------------------------------------------------
-        # Fallback case -- Bad option.
-        # --------------------------------------------------------------------------
-        log_fatal "Invalid option '${user_selection}'"
-        ;;
-esac
+gum log --level debug --structured 'Attaching session' session "${user_selection}"
+tmux attach -t "${user_selection}"
