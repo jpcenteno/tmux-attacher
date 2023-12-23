@@ -21,6 +21,7 @@
       packages = rec {
         tmux-attacher = pkgs.stdenv.mkDerivation rec {
           name = "tmux-attacher";
+          runtimeInputs = [ pkgs.gum ];
           src = ./.;
           unpackPhase = "true"; # FIXME what does this mean?
           buildPhase = ":"; # FIXME what does this mean?
