@@ -23,7 +23,7 @@
         # passed to `tmux-attacher` before executing it.
         tmux-attacher = pkgs.writeScriptBin "tmux-attacher" ''
           export PATH="${pkgs.lib.makeBinPath [ pkgs.gum ]}:$PATH"
-          ${./tmux-attacher}
+          ${./tmux-attacher} $@
         '';
 
         default = tmux-attacher;
