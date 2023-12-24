@@ -19,21 +19,16 @@
       };
 
       packages = rec {
-        tmux-attacher = pkgs.stdenv.mkDerivation rec {
-          name = "tmux-attacher";
-          runtimeInputs = [ pkgs.gum ];
-          src = ./.;
-          unpackPhase = "true"; # FIXME what does this mean?
-          buildPhase = ":"; # FIXME what does this mean?
-          installPhase =
-            ''
-              mkdir -p "$out/bin"
-              cp "$src/tmux-attacher" "$out/bin/tmux-attacher"
-              chmod +x "$out/bin/tmux-attacher"
-            '';
-        };
+        # This approach employs a wrapper script that modifies the runtime PATH
+        # passed to `tmux-attacher` before executing it.
+        tmux-attacher = pkgs.writeScriptBin "tmux-attacher" ''
+          export PATH="${pkgs.lib.makeBinPath [ pkgs.gum ]}:$PATH"
+          ${./tmux-attacher}
+        '';
+
         default = tmux-attacher;
       };
+
 
       apps = rec {
         tmux-attacher = flake-utils.lib.mkApp {
