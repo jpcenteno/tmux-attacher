@@ -38,12 +38,10 @@ has_command 'tmux' || gum log --level fatal --structured 'Required program not f
 # If any other arguments were provided to the script, delegate them to `tmux`,
 # then exit. We only care about extending the functionality with an interactive
 # prompt in case no arguments were provided.
-if [ "${#}" -ne "0" ]; then
-    # Disabling SC2068. In this case, we explicitly want to re-split elements.
-    # shellcheck disable=SC2068
-    tmux ${@}
-    exit "${?}" # Resend `tmux` exit status code.
-fi
+#
+# Disabling SC2068. Re-splitting elements from $@ is intentional.
+# shellcheck disable=SC2068
+[ "${#}" -eq 0 ] || exec tmux ${@}
 
 user_selection="$( prompt_user_select_tmux_session )"
 
