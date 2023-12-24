@@ -43,16 +43,16 @@ has_command 'tmux' || gum log --level fatal --structured 'Required program not f
 # shellcheck disable=SC2068
 [ "${#}" -eq 0 ] || exec tmux ${@}
 
-user_selection="$( prompt_user_select_tmux_session )"
+session_name="$( prompt_user_select_tmux_session )"
 
-if [ "${user_selection}" = "[new session]" ]; then
-    user_selection="$( gum input --placeholder "New session name" )"
+if [ "${session_name}" = "[new session]" ]; then
+    session_name="$( gum input --placeholder "New session name" )"
 
     # Create a detached session with the provided name (flag `-d`). We will
     # attach to it later in the script. This will fail if there is already a
     # session with the provided name.
-    tmux new-session -s "${user_selection}" -d
+    tmux new-session -s "${session_name}" -d
 fi
 
-gum log --level debug --structured 'Attaching session' session "${user_selection}"
-exec tmux attach -t "${user_selection}"
+gum log --level debug --structured 'Attaching session' session "${session_name}"
+exec tmux attach -t "${session_name}"
