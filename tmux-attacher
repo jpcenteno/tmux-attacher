@@ -55,4 +55,4 @@ if [ "${user_selection}" = "[new session]" ]; then
 fi
 
 gum log --level debug --structured 'Attaching session' session "${user_selection}"
-tmux attach -t "${user_selection}"
+exec tmux attach -t "${user_selection}"
