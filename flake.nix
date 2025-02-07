@@ -10,38 +10,36 @@
   flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = import nixpkgs { inherit system; };
+      name = "tmux-attacher";
+      deps = with pkgs; [ gum tmux ];
+      src = builtins.readFile ./tmux-attacher;
+      script = (pkgs.writeScriptBin name src).overrideAttrs(old: {
+        buildCommand = "${old.buildCommand}\n patchShebangs $out";
+      });
     in
     {
-      devShells = rec {
-        default = pkgs.mkShell {
-          packages = [ pkgs.gum ];
-        };
+      devShells.default = pkgs.mkShell {
+        packages = deps;
       };
 
-      packages = let
-          name = "tmux-attacher";
-          src = builtins.readFile ./tmux-attacher;
-          script = (pkgs.writeScriptBin name src).overrideAttrs(old: {
-            buildCommand = "${old.buildCommand}\n patchShebangs $out";
-          });
-        in rec {
+      packages = {
         # This approach employs a wrapper script that modifies the runtime PATH
         # passed to `tmux-attacher` before executing it.
-        tmux-attacher = pkgs.symlinkJoin {
+        ${name} = pkgs.symlinkJoin {
           inherit name;
-          paths = [ script ] ++ [ pkgs.gum ];
+          paths = [ script ] ++ deps;
           buildInputs = [ pkgs.makeWrapper ];
           postBuild = "wrapProgram $out/bin/${name} --prefix PATH : $out/bin";
         };
-        default = tmux-attacher;
+        default = self.packages.${system}.${name};
       };
 
 
-      apps = rec {
-        tmux-attacher = flake-utils.lib.mkApp {
-          drv = self.packages.${system}.tmux-attacher;
+      apps = {
+        ${name} = flake-utils.lib.mkApp {
+          drv = self.packages.${system}.${name};
         };
-        default = tmux-attacher;
+        default = self.apps.${system}.${name};
       };
     }
   );
