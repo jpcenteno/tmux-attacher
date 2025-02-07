@@ -18,14 +18,21 @@
         };
       };
 
-      packages = rec {
+      packages = let
+          name = "tmux-attacher";
+          src = builtins.readFile ./tmux-attacher;
+          script = (pkgs.writeScriptBin name src).overrideAttrs(old: {
+            buildCommand = "${old.buildCommand}\n patchShebangs $out";
+          });
+        in rec {
         # This approach employs a wrapper script that modifies the runtime PATH
         # passed to `tmux-attacher` before executing it.
-        tmux-attacher = pkgs.writeScriptBin "tmux-attacher" ''
-          export PATH="${pkgs.lib.makeBinPath [ pkgs.gum ]}:$PATH"
-          ${./tmux-attacher} $@
-        '';
-
+        tmux-attacher = pkgs.symlinkJoin {
+          inherit name;
+          paths = [ script ] ++ [ pkgs.gum ];
+          buildInputs = [ pkgs.makeWrapper ];
+          postBuild = "wrapProgram $out/bin/${name} --prefix PATH : $out/bin";
+        };
         default = tmux-attacher;
       };
 
