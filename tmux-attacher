@@ -1,6 +1,18 @@
 #!/bin/sh
 set -eu
 
+# The sole purpose of this script is to override the default behavior of `tmux`
+# when called without any arguments by adding a nice user interface that helps
+# the user to keep the active sessions named and organized.
+#
+# The following conditional short circuits if the user passed any argument to
+# the script by directly delegating them to `tmux`.
+#
+#
+# Disabling SC2068. Re-splitting elements from $@ is intentional in this case.
+# shellcheck disable=SC2068
+[ "${#}" -eq 0 ] || exec tmux ${@}
+
 # ╔════════════════════════════════════════════════════════════════════════╗
 # ║ Aux functions                                                          ║
 # ╚════════════════════════════════════════════════════════════════════════╝
@@ -34,14 +46,6 @@ if ! has_command 'gum'; then
 fi
 
 has_command 'tmux' || gum log --level fatal --structured 'Required program not found in PATH' program 'tmux'
-
-# If any other arguments were provided to the script, delegate them to `tmux`,
-# then exit. We only care about extending the functionality with an interactive
-# prompt in case no arguments were provided.
-#
-# Disabling SC2068. Re-splitting elements from $@ is intentional.
-# shellcheck disable=SC2068
-[ "${#}" -eq 0 ] || exec tmux ${@}
 
 session_name="$( prompt_user_select_tmux_session )"
 
