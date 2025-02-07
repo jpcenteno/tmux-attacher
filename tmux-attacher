@@ -54,5 +54,21 @@ if [ "${session_name}" = "[new session]" ]; then
     tmux new-session -s "${session_name}" -d
 fi
 
-gum log --level debug --structured 'Attaching session' session "${session_name}"
-exec tmux attach -t "${session_name}"
+if [ -z "${TMUX:-}" ]; then
+    # When the script IS NOT running inside a Tmux session, we should use the
+    # `attach-session` subcommand, which creates a new client.
+    #
+    # DO NOT use the `switch-client` subcommand in this scenario. It will affect
+    # another running TMUX clients leading to unexpected behavior instead of
+    # starting a new client.
+    COMMAND="attach-session"
+else
+    # When the script IS running inside Tmux, we SHOULD use the `switch-client`
+    # subcommand which affects the current client.
+    #
+    # DO NOT use this command outside a tmux client as it will affect another
+    # running TMUX clients leading to unexpected behavior.
+    COMMAND="switch-client"
+fi
+
+exec tmux "${COMMAND}" -t "${session_name}"
