@@ -17,6 +17,11 @@ set -eu
 # ║ Aux functions                                                          ║
 # ╚════════════════════════════════════════════════════════════════════════╝
 
+die() {
+    echo "${1}"
+    exit 1
+}
+
 # Fails if the command $1 is not present in the $PATH.
 has_command() {
     command -v "${1}" >/dev/null 2>&1 
@@ -38,14 +43,8 @@ prompt_user_select_tmux_session() {
 # ║ Script starts here:                                                    ║
 # ╚════════════════════════════════════════════════════════════════════════╝
 
-if ! has_command 'gum'; then
-    echo 'FATAL:'
-    echo "${0} requires 'gum' to provide interactive prompts."
-    echo "Install 'gum' and ensure it is available in your PATH"
-    exit 1
-fi
-
-has_command 'tmux' || gum log --level fatal --structured 'Required program not found in PATH' program 'tmux'
+has_command 'tmux' || die "Program 'tmux (1)' not found in \$PATH"
+has_command 'gum' || die "Program 'gum (1)' not found in \$PATH"
 
 session_name="$( prompt_user_select_tmux_session )"
 
